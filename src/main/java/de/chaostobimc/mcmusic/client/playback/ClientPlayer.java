@@ -215,6 +215,8 @@ public final class ClientPlayer {
             sourceName = "";
             liveFrame = null;
             framesPlayed.set((long) skipSeconds * PcmQueue.SAMPLE_RATE);
+            MCMusic.LOGGER.info("MC Music: playing '{}' by '{}' ({}){}", newTrack.title(), newTrack.artist(),
+                    newTrack.id(), skipSeconds > 0 ? " from " + skipSeconds + "s" : "");
             Thread thread = new Thread(() -> run(fresh, newTrack, skipSeconds, gen), "MCMusic-playback");
             thread.setDaemon(true);
             worker = thread;
@@ -259,6 +261,7 @@ public final class ClientPlayer {
             resolved = AudioResolver.resolve(current, MusicConfig.get());
             source = resolved;
             sourceName = resolved.describe();
+            MCMusic.LOGGER.info("MC Music: audio source resolved via {}", sourceName);
             decode = new AudioDecoder(resolved, pcm, skipSeconds);
             decoder = decode;
             Thread decodeThread = new Thread(decode, "MCMusic-decode");
