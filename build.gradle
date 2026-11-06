@@ -20,12 +20,12 @@ repositories {
 }
 
 dependencies {
+    // Minecraft 26.x ships non-obfuscated (official names), so there is no `mappings`
+    // entry and Loom uses the plain `implementation` / `compileOnly` configurations
+    // instead of the `mod*` ones it used for obfuscated versions.
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    // No mappings entry on purpose: Minecraft 26.x ships non-obfuscated (official names),
-    // and Loom refuses Mojang mappings in a non-obfuscated environment. Yarn has no 26.x
-    // mappings either - the sources simply use the official names.
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
     // Simple Voice Chat API - compile only, shipped by the Simple Voice Chat mod itself.
     compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
@@ -53,13 +53,13 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach {
     it.options.encoding = 'UTF-8'
-    it.options.release.set(25)
+    it.options.release = 25
 }
 
 java {
     withSourcesJar()
-    // No hard toolchain pin: any JDK >= 25 works. The compile target is set with
-    // `options.release = 25` above, which newer JDKs (26, 27, ...) honour as well.
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 jar {

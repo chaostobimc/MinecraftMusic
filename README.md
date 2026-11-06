@@ -76,8 +76,8 @@ stellen — dann läuft die Musik ausschließlich über deine Lautsprecher.
 | Was | Version |
 |---|---|
 | Minecraft Java Edition | **26.3** |
-| Fabric Loader | ≥ 0.19.3 |
-| Fabric API | 0.160.5+26.3 oder neuer |
+| Fabric Loader | ≥ 0.20.1 |
+| Fabric API | 0.165.0+26.3 oder neuer |
 | Java | **25** (26.3 verlangt Java 25) |
 | Simple Voice Chat | ≥ 2.4 (nur **dein** Client; Server: irgendeine SVC-Version, ohne Zusatzmods) |
 | `yt-dlp` + `ffmpeg` | auf deinem PC, für echtes YouTube Music |
