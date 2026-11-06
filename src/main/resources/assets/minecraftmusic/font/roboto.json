@@ -1,0 +1,23 @@
+{
+  "providers": [
+    {
+      "type": "space",
+      "advances": {
+        " ": 3,
+        "\u200c": 0
+      }
+    },
+    {
+      "type": "ttf",
+      "file": "minecraftmusic:roboto_regular.ttf",
+      "size": 22,
+      "oversample": 3.0,
+      "shift": [0, 0],
+      "skip": ""
+    },
+    {
+      "type": "reference",
+      "id": "minecraft:include/unifont"
+    }
+  ]
+}
