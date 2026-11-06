@@ -15,6 +15,11 @@ Mod, ohne Download, ohne Client-Mod bei den Zuhörern.
 /mcmusic stop            stoppt die Wiedergabe
 ```
 
+![Design-Konzept](docs/design-concept.png)
+
+*Design-Konzept des GUIs (Mockup, keine Spielaufnahme) — genau diese Anordnung setzt
+`MusicScreen` um: Sidebar mit Playlists, Suchleiste oben, Karten-Grid, Player-Leiste unten.*
+
 ---
 
 ## Inhalte

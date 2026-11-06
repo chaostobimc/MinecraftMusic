@@ -51,6 +51,7 @@ public final class VoicechatBridge {
                     .setName("Music player")
                     .setNameTranslationKey("mcmusic.voicechat.category")
                     .setDescription("Volume of music played through MC Music")
+                    .setIcon(noteIcon())
                     .setDescriptionTranslationKey("mcmusic.voicechat.category.desc")
                     .build();
             serverApi().registerVolumeCategory(category);
@@ -58,5 +59,30 @@ public final class VoicechatBridge {
         } catch (Exception exception) {
             MCMusic.LOGGER.warn("Could not register the voice chat volume category", exception);
         }
+    }
+
+    /** A 16x16 musical note, used as the icon of the voice chat volume slider. */
+    private static int[][] noteIcon() {
+        int[][] icon = new int[16][16];
+        int white = 0xFFFFFFFF;
+        for (int y = 2; y <= 11; y++) {
+            icon[y][9] = white;
+            icon[y][10] = white;
+        }
+        for (int x = 11; x <= 13; x++) {
+            icon[2][x] = white;
+            icon[3][x] = white;
+            icon[4][x] = white;
+        }
+        for (int y = 9; y <= 13; y++) {
+            for (int x = 4; x <= 9; x++) {
+                double dx = (x - 6.5) / 3.0;
+                double dy = (y - 11.5) / 2.2;
+                if (dx * dx + dy * dy <= 1.0) {
+                    icon[y][x] = white;
+                }
+            }
+        }
+        return icon;
     }
 }
