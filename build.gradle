@@ -1,0 +1,175 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = "${mod_version}"
+group = "${maven_group}"
+
+base {
+    archivesName = "${archives_base_name}"
+}
+
+repositories {
+    // Simple Voice Chat API
+    maven {
+        name = 'Henkelmax'
+        url = 'https://maven.maxhenkel.de/repository/public'
+    }
+    // LavaPlayer + youtube-source
+    maven {
+        name = 'Lavalink'
+        url = 'https://maven.lavalink.dev/releases'
+    }
+}
+
+loom {
+    splitEnvironmentSourceSets()
+
+    mods {
+        "minecraftmusic" {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
+}
+
+dependencies {
+    // Minecraft 26.3 (offizielle Mojang-Mappings sind bei 26.x Standard)
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // Simple Voice Chat API - nur zur Compile-Zeit.
+    // Zur Laufzeit liefert das installierte SVC-Mod die Implementierung.
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+    // Audio-Stack: LavaPlayer 2.x + youtube-source v2.
+    // Loom bettet nur die direkt genannten Artefakte ein, keine Transitives -
+    // deshalb sind die Laufzeitabhaengigkeiten hier einzeln aufgefuehrt.
+    implementation("dev.arbjerg:lavaplayer:${project.lavaplayer_version}") {
+        exclude group: 'org.slf4j'          // bringt Minecraft selbst mit
+        exclude group: 'org.jetbrains'      // nur Compile-Time-Annotationen
+    }
+    include "dev.arbjerg:lavaplayer:${project.lavaplayer_version}"
+
+    implementation("dev.lavalink.youtube:v2:${project.youtube_source_version}") {
+        exclude group: 'org.slf4j'
+    }
+    include "dev.lavalink.youtube:v2:${project.youtube_source_version}"
+
+    // LavaPlayer-Laufzeitabhaengigkeiten (HTTP, JSON, JS-Engine fuer Signaturen)
+    for (dep in [
+            "org.apache.httpcomponents:httpclient:4.5.14",
+            "com.fasterxml.jackson.core:jackson-core:2.15.2",
+            "com.fasterxml.jackson.core:jackson-databind:2.15.2",
+            "com.fasterxml.jackson.core:jackson-annotations:2.15.2",
+            "org.jsoup:jsoup:1.16.1",
+            "org.mozilla:rhino-engine:1.7.15",
+            "org.mozilla:rhino:1.7.15",
+            "com.grack:nanojson:1.7",
+            "org.json:json:20240303",
+            "net.iharder:base64:2.3.9",
+            // commons-io / commons-codec / commons-logging bringt Minecraft selbst mit
+            "commons-logging:commons-logging:1.2"
+    ]) {
+        implementation(dep)
+        include(dep)
+    }
+
+    // Opus-Encoder (pure Java, keine Natives): PCM -> Opus fuer Simple Voice Chat
+    implementation "org.concentus:Concentus:${project.concentus_version}"
+    include "org.concentus:Concentus:${project.concentus_version}"
+}
+
+processResources {
+    def props = [
+            version            : project.version,
+            minecraft_version  : project.minecraft_version,
+            loader_version     : project.loader_version
+    ]
+    inputs.properties props
+
+    filesMatching("fabric.mod.json") {
+        expand props
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 25
+    it.options.encoding = "UTF-8"
+}
+
+java {
+    withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Stellt sicher, dass die eingebetteten Bibliotheken nicht neuer als Java 21 sind.
+// Simple Voice Chat zielt auf Java 21; neuerer Bytecode wuerde den Mod-Load brechen.
+tasks.register('checkEmbeddedBytecode') {
+    def embedded = configurations.include
+
+    doLast {
+        def failures = []
+        def resolved
+        try {
+            resolved = embedded.files
+        } catch (Exception e) {
+            logger.warn("Bytecode-Check uebersprungen: {}", e.message)
+            return
+        }
+        resolved.each { file ->
+            if (file.name.endsWith('.jar')) {
+                def zip = new java.util.zip.ZipFile(file)
+                try {
+                    for (def entry in zip.entries()) {
+                        if (entry.name.endsWith('.class')) {
+                            def raw = zip.getInputStream(entry)
+                            try {
+                                def stream = new DataInputStream(raw)
+                                if (stream.readInt() == 0xCAFEBABE) {
+                                    stream.readUnsignedShort()
+                                    int major = stream.readUnsignedShort()
+                                    if (major > 65) { // 65 = Java 21
+                                        failures << "${entry.name} in ${file.name} (Major ${major})"
+                                    }
+                                }
+                            } finally {
+                                raw.close()
+                            }
+                        }
+                    }
+                } finally {
+                    zip.close()
+                }
+            }
+        }
+        if (!failures.isEmpty()) {
+            throw new GradleException("Eingebettete Bibliotheken benoetigen Bytecode neuer als Java 21: "
+                    + failures.take(10).join(', '))
+        }
+    }
+}
+
+jar {
+    def projectName = project.name
+    inputs.property "projectName", projectName
+
+    from("LICENSE") {
+        rename { "${it}_$projectName" }
+    }
+
+    dependsOn 'checkEmbeddedBytecode'
+}
+
+publishing {
+    publications {
+        create("mavenJava", MavenPublication) {
+            from components.java
+        }
+    }
+    repositories {
+    }
+}

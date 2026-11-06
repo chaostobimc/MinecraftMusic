@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "minecraftmusic",
+  "version": "${version}",
+  "name": "Minecraft Music",
+  "description": "YouTube Music direkt in Minecraft: eigene Desktop-Oberfläche, Suche, Playlists, Favoriten und Wiedergabe über Simple Voice Chat, damit alle mithören können.",
+  "authors": [
+    "chaostobimc"
+  ],
+  "contact": {
+    "homepage": "https://github.com/chaostobimc/MinecraftMusic",
+    "sources": "https://github.com/chaostobimc/MinecraftMusic",
+    "issues": "https://github.com/chaostobimc/MinecraftMusic/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/minecraftmusic/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.chaostobimc.minecraftmusic.MinecraftMusic"
+    ],
+    "client": [
+      "com.chaostobimc.minecraftmusic.MinecraftMusicClient"
+    ],
+    "voicechat": [
+      "com.chaostobimc.minecraftmusic.voicechat.MinecraftMusicVoicechatPlugin"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "voicechat": ">=2.7.0"
+  }
+}
