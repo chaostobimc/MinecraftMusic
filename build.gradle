@@ -21,6 +21,8 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    // MC 26.x ships with official (Mojang) names - Yarn has no 26.x mappings.
+    mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
@@ -55,9 +57,8 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     withSourcesJar()
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
+    // No hard toolchain pin: any JDK >= 25 works. The compile target is set with
+    // `options.release = 25` above, which newer JDKs (26, 27, ...) honour as well.
 }
 
 jar {

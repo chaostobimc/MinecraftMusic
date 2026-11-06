@@ -168,11 +168,15 @@ Favoriten, Playlists und Verlauf liegen in `config/mcmusic-library.json`.
 ## Bauen
 
 ```bash
-# Gradle 9.4+ und JDK 25 nötig
-gradle build           # -> build/libs/mcmusic-1.0.0.jar
-# oder einmalig einen Wrapper erzeugen:
-gradle wrapper && ./gradlew build
+# JDK 25 oder neuer; der Wrapper holt sich Gradle 9.5.0 selbst
+./gradlew build        # -> build/libs/mcmusic-1.0.0.jar
 ```
+
+**Gradle-Version beachten:** Loom 1.17.x verlangt **Gradle 9.5 oder neuer**. Ein älteres
+Gradle bricht schon beim Konfigurieren ab
+(`No matching variant of net.fabricmc:fabric-loom:1.17.20 ... plugin.api-version 9.5.0`).
+Der mitgelieferte Wrapper zeigt deshalb auf 9.5.0 — also bitte `./gradlew` benutzen statt
+`gradle`, oder die eigene Installation aktualisieren (`gradle wrapper --gradle-version 9.5.0`).
 
 In IntelliJ IDEA: Projekt öffnen, Gradle-Sync laufen lassen, `runClient`.
 
