@@ -83,8 +83,10 @@ public final class MusicScreen extends Screen {
 
     @Override
     protected void init() {
+        super.init();
         layout();
         music.load();
+        de.chaostobimc.mcmusic.MCMusic.LOGGER.info("MC Music: screen init at {}x{}", width, height);
     }
 
     @Override
@@ -135,6 +137,10 @@ public final class MusicScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        if (frameCount == 0) {
+            de.chaostobimc.mcmusic.MCMusic.LOGGER.info("MC Music: first frame {}x{}, gui {}x{}", width, height,
+                    graphics.guiWidth(), graphics.guiHeight());
+        }
         frameCount++;
         long now = System.currentTimeMillis();
         float delta = Math.min(0.1f, (now - lastFrameTime) / 1000f);
