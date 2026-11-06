@@ -15,15 +15,15 @@ import java.nio.file.Path;
 /**
  * Single configuration file ({@code config/mcmusic.json}).
  *
- * <p>The same file is used on the client and on the server - both sides simply ignore
- * the fields that do not apply to them.</p>
+ * <p>MC Music is a client side mod: search, decoding, playback and the voice chat stream
+ * all happen on your own computer. Nothing in here is ever sent to the server.</p>
  */
 public final class MusicConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static MusicConfig instance = new MusicConfig();
 
-    // ---- providers (client side search, server side stream resolution) ----
+    // ---- providers (search and stream lookup, all from this client) ----
     /** "piped" or "invidious". */
     public String providerType = "piped";
     /** Base url of a Piped API instance, e.g. https://pipedapi.kavin.rocks */
@@ -33,12 +33,12 @@ public final class MusicConfig {
     /** Used when no provider instance is reachable. */
     public String fallbackInstance = "https://pipedapi.kavin.rocks";
 
-    // ---- audio (server side) ----
+    // ---- audio (local decoding) ----
     /**
      * Where the audio comes from: "auto", "ytdlp", "http" or "local".
      * <ul>
      *     <li><b>auto</b> - try a direct provider stream, then the yt-dlp pipeline, then the local library</li>
-     *     <li><b>ytdlp</b> - yt-dlp + ffmpeg on the server, needed for real YouTube Music playback</li>
+     *     <li><b>ytdlp</b> - yt-dlp + ffmpeg installed on this PC, needed for real YouTube Music playback</li>
      *     <li><b>http</b> - only play direct mp3/wav urls handed out by the provider</li>
      *     <li><b>local</b> - only play files from {@link #libraryFolder}</li>
      * </ul>
@@ -53,19 +53,22 @@ public final class MusicConfig {
     /** Folder (relative to the world/game directory) with local audio files named &lt;videoId&gt;.mp3/.wav. */
     public String libraryFolder = "mcmusic-library";
 
-    // ---- playback (server side) ----
-    /** 0..1, applied on top of the Simple Voice Chat volume slider. */
+    // ---- playback ----
+    /** 0..1, applied before the audio is mixed into the voice chat stream. */
     public double volume = 0.65;
     /** Hard limit so a single stream cannot run forever. */
     public int maxTrackSeconds = 900;
-    /** Allow every player to control playback, not only the one who started it. */
-    public boolean everyoneCanControl = true;
-    /** Number of queued songs a single player may add. */
-    public int maxQueueSize = 50;
+    /**
+     * Mix the music into your outgoing Simple Voice Chat stream, so every player that can
+     * hear your voice also hears the music. Purely client side - the server only needs the
+     * normal Simple Voice Chat mod.
+     */
+    public boolean broadcastToVoicechat = true;
+    /** Play the music through your own speakers as well. */
+    public boolean localPlayback = true;
 
     // ---- client ui ----
     public boolean darkTheme = true;
-    public boolean showPlayerBarAlways = true;
     public String language = "en_us";
     public boolean reduceMotion = false;
 

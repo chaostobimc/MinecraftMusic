@@ -6,7 +6,8 @@ import de.chaostobimc.mcmusic.api.LocalPlaylist;
 import de.chaostobimc.mcmusic.api.Track;
 import de.chaostobimc.mcmusic.client.ClientMusic;
 import de.chaostobimc.mcmusic.config.MusicConfig;
-import de.chaostobimc.mcmusic.net.Payloads;
+import de.chaostobimc.mcmusic.client.NowPlaying;
+import de.chaostobimc.mcmusic.voicechat.VoicechatSupport;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
@@ -84,7 +85,6 @@ public final class MusicScreen extends Screen {
     protected void init() {
         layout();
         music.load();
-        music.requestState();
     }
 
     @Override
@@ -290,12 +290,13 @@ public final class MusicScreen extends Screen {
         int chipRight = winX + winW - 46;
         int chipW = 92;
         int chipX = chipRight - chipW;
-        boolean inside = music.state.hasTrack();
-        int chipColor = inside ? theme.surface : theme.surfaceHover;
+        boolean live = music.state.hasTrack();
+        boolean voice = VoicechatSupport.canStreamToOthers();
+        int chipColor = live ? theme.surface : theme.surfaceHover;
         Ui.rect(graphics, chipX, searchY + 2, chipW, 28, 14, chipColor);
-        Ui.icon(graphics, chipX + 10, searchY + 9, 14, inside ? Ui.ICON_WIFI : Ui.ICON_WIFI, inside ? theme.accent : theme.textMuted);
-        String chipText = inside ? music.state.listeners() + " listening" : "Idle";
-        UiFont.draw(graphics, chipText, chipX + 30, searchY + 21, 11, inside ? theme.text : theme.textMuted, 0);
+        Ui.icon(graphics, chipX + 10, searchY + 9, 14, Ui.ICON_WIFI, voice ? theme.accent : theme.textMuted);
+        String chipText = voice ? (live ? "Live" : "Ready") : "Local";
+        UiFont.draw(graphics, chipText, chipX + 30, searchY + 21, 11, voice ? theme.text : theme.textMuted, 0);
 
         // close button
         int closeX = winX + winW - 38;
@@ -661,7 +662,7 @@ public final class MusicScreen extends Screen {
         Ui.rect(graphics, winX + 8, playerY, winW - 16, playerH, 12, theme.playerBar);
         Ui.outline(graphics, winX + 8, playerY, winW - 16, playerH, 12, theme.divider);
 
-        Payloads.PlaybackState state = music.state;
+        NowPlaying state = music.state;
         int x = winX + 20;
         int coverSize = playerH - 20;
         int coverY = playerY + 10;
@@ -767,7 +768,7 @@ public final class MusicScreen extends Screen {
     private void drawSettings(GuiGraphicsExtractor graphics, Theme theme, int mouseX, int mouseY) {
         graphics.fill(winX, winY, winX + winW, winY + winH, 0x99000000);
         int w = Math.min(420, winW - 40);
-        int h = Math.min(300, winH - 40);
+        int h = Math.min(360, winH - 40);
         int x = winX + (winW - w) / 2;
         int y = winY + (winH - h) / 2;
         Ui.rect(graphics, x, y, w, h, 14, theme.surface);
@@ -803,6 +804,16 @@ public final class MusicScreen extends Screen {
         Ui.rect(graphics, x + 20, rowY + 8, 110, 26, 8, theme.window);
         UiFont.draw(graphics, config.darkTheme ? "Dark" : "Light", x + 32, rowY + 26, 12, theme.text, 0);
         hits.add(new Hit(x + 20, rowY + 8, 110, 26, Action.TOGGLE_THEME, null));
+        rowY += 48;
+
+        UiFont.draw(graphics, "Voice Chat", x + 20, rowY, 11, theme.textMuted, 1);
+        boolean streaming = config.broadcastToVoicechat;
+        String streamLabel = streaming
+                ? (VoicechatSupport.isActive() ? "Streaming" : "No voice chat mod")
+                : "Off (local only)";
+        Ui.rect(graphics, x + 20, rowY + 8, 110, 26, 8, theme.window);
+        UiFont.draw(graphics, streamLabel, x + 32, rowY + 26, 11, streaming ? theme.text : theme.textMuted, 0);
+        hits.add(new Hit(x + 20, rowY + 8, 110, 26, Action.TOGGLE_BROADCAST, null));
 
         // volume slider
         UiFont.draw(graphics, "Volume", x + w - 160, rowY, 11, theme.textMuted, 1);
@@ -812,8 +823,11 @@ public final class MusicScreen extends Screen {
         hits.add(new Hit(x + w - 160, rowY + 12, 130, 20, Action.VOLUME, null));
         rowY += 52;
 
-        UiFont.draw(graphics, "Audio is played through Simple Voice Chat.", x + 20, rowY + 6, 11, theme.textSecondary, 0);
-        String backend = "Backend: " + config.audioBackend + "  \u00b7  server side";
+        String route = config.broadcastToVoicechat
+                ? "Mixed into your Simple Voice Chat microphone stream"
+                : "Local playback only - nobody else hears this";
+        UiFont.draw(graphics, route, x + 20, rowY + 6, 11, theme.textSecondary, 0);
+        String backend = "Backend: " + config.audioBackend + "  \u00b7  on this PC";
         UiFont.draw(graphics, backend, x + 20, rowY + 22, 11, theme.textMuted, 0);
 
         int closeW = 96;
@@ -990,6 +1004,18 @@ public final class MusicScreen extends Screen {
                 MusicConfig config = MusicConfig.get();
                 config.darkTheme = !config.darkTheme;
                 config.save();
+            }
+            case TOGGLE_BROADCAST -> {
+                MusicConfig config = MusicConfig.get();
+                config.broadcastToVoicechat = !config.broadcastToVoicechat;
+                config.save();
+                if (config.broadcastToVoicechat && !VoicechatSupport.isActive()) {
+                    music.notify("Simple Voice Chat is not running - music stays on this PC.");
+                } else if (config.broadcastToVoicechat) {
+                    music.notify("Music is now mixed into your voice chat stream.");
+                } else {
+                    music.notify("Local playback only - nobody else hears this anymore.");
+                }
             }
             case EDIT_URL -> {
                 MusicConfig config = MusicConfig.get();
@@ -1306,7 +1332,7 @@ public final class MusicScreen extends Screen {
         NAV_HOME, NAV_SEARCH, NAV_LIBRARY, NAV_FAVORITES, OPEN_PLAYLIST, PLAY_TRACK, PLAY_FAVORITES,
         PLAY_PLAYLIST, DELETE_PLAYLIST, TOGGLE_FAVORITE, TOGGLE_FAVORITE_CURRENT, ADD_TO_PLAYLIST,
         TOGGLE_PLAY, NEXT, PREVIOUS, TOGGLE_SHUFFLE, TOGGLE_REPEAT, SEEK, VOLUME, FOCUS_SEARCH,
-        CLOSE, OPEN_SETTINGS, CLOSE_SETTINGS, TOGGLE_PROVIDER, TOGGLE_THEME, EDIT_URL,
+        CLOSE, OPEN_SETTINGS, CLOSE_SETTINGS, TOGGLE_PROVIDER, TOGGLE_THEME, TOGGLE_BROADCAST, EDIT_URL,
         NEW_PLAYLIST, CONFIRM_PLAYLIST
     }
 

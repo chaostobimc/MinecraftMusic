@@ -3,7 +3,7 @@
   "id": "mcmusic",
   "version": "${version}",
   "name": "MC Music",
-  "description": "YouTube Music in Minecraft: a modern, high resolution music client with search, playlists and favourites, streaming through Simple Voice Chat so everyone on the server can hear it.",
+  "description": "YouTube Music in Minecraft: a client only mod with a modern, high resolution music client (search, playlists, favourites) that mixes the music into your Simple Voice Chat microphone stream, so everyone around you hears it. The server needs nothing but Simple Voice Chat.",
   "authors": [
     "chaostobimc"
   ],
@@ -14,11 +14,8 @@
   },
   "license": "MIT",
   "icon": "assets/mcmusic/icon.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "de.chaostobimc.mcmusic.MCMusic"
-    ],
     "client": [
       "de.chaostobimc.mcmusic.client.MCMusicClient"
     ],

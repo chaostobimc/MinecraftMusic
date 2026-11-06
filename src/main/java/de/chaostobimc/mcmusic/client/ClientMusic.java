@@ -5,9 +5,9 @@ import com.google.gson.GsonBuilder;
 import de.chaostobimc.mcmusic.MCMusic;
 import de.chaostobimc.mcmusic.api.LocalPlaylist;
 import de.chaostobimc.mcmusic.api.Track;
-import de.chaostobimc.mcmusic.net.Payloads;
+import de.chaostobimc.mcmusic.client.playback.ClientPlayer;
+import de.chaostobimc.mcmusic.config.MusicConfig;
 import de.chaostobimc.mcmusic.provider.Providers;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.Reader;
@@ -21,8 +21,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Client side state: what the server is playing, the local library (favourites, playlists,
- * history), the play queue and the search results.
+ * Client side state: the local library (favourites, playlists, history), the play queue,
+ * the search results and the current playback state.
+ *
+ * <p>Everything here is purely local - MC Music has no server component, so the queue and
+ * the controls drive {@link ClientPlayer} directly.</p>
  */
 public final class ClientMusic {
 
@@ -35,7 +38,8 @@ public final class ClientMusic {
         return thread;
     });
 
-    public Payloads.PlaybackState state = Payloads.PlaybackState.idle("");
+    /** Snapshot for the UI, refreshed every client tick. */
+    public NowPlaying state = NowPlaying.IDLE;
 
     public final List<Track> favorites = new ArrayList<>();
     public final List<LocalPlaylist> playlists = new ArrayList<>();
@@ -51,14 +55,10 @@ public final class ClientMusic {
     public String searchError = "";
     public boolean searching;
 
-    /** Set when we want to move on to the next song after the current one ended. */
-    private String lastStateTrackId = "";
     private String notice = "";
     private long noticeUntil;
-
+    private String lastPlaybackError = "";
     private boolean loaded;
-    /** Set when the user pressed stop, so the idle state does not start the next song. */
-    private boolean stoppedByUser;
 
     private ClientMusic() {
     }
@@ -68,42 +68,31 @@ public final class ClientMusic {
     }
 
     // ------------------------------------------------------------------
-    // server state
+    // tick
     // ------------------------------------------------------------------
 
-    public void onState(Payloads.PlaybackState newState) {
-        String previousTrack = lastStateTrackId;
-        boolean hadTrack = !previousTrack.isEmpty();
-        state = newState;
+    /** Called at the end of every client tick: keeps the UI in sync and advances the queue. */
+    public void tick() {
+        ClientPlayer player = ClientPlayer.get();
+        state = player.snapshot();
 
-        if (newState.hasTrack()) {
-            lastStateTrackId = newState.trackId();
-            if (!newState.trackId().equals(previousTrack)) {
-                Track track = new Track(newState.trackId(), newState.title(), newState.artist(),
-                        newState.durationSeconds(), "");
-                addRecent(track);
-            }
-        } else {
-            lastStateTrackId = "";
-            if (hadTrack && newState.error().isEmpty()) {
-                onTrackEnded();
-            }
-            if (!newState.error().isEmpty()) {
-                notify(newState.error());
-            }
+        String error = player.error();
+        if (!error.isEmpty() && !error.equals(lastPlaybackError)) {
+            lastPlaybackError = error;
+            notify(error);
+        } else if (error.isEmpty()) {
+            lastPlaybackError = "";
         }
-    }
 
-    private void onTrackEnded() {
-        if (stoppedByUser) {
-            stoppedByUser = false;
-            return;
+        if (player.consumeEndOfTrack()) {
+            if (shuffle && queue.size() > 1) {
+                next(true);
+            } else if (queueIndex + 1 >= queue.size() && repeat && !queue.isEmpty()) {
+                playQueue(queue, 0);
+            } else {
+                next(true);
+            }
         }
-        if (repeat && !queue.isEmpty()) {
-            playTrack(queue.get(Math.max(0, queueIndex)));
-            return;
-        }
-        next(true);
     }
 
     // ------------------------------------------------------------------
@@ -128,24 +117,24 @@ public final class ClientMusic {
     }
 
     private void playTrack(Track track) {
-        stoppedByUser = false;
-        if (!send(new Payloads.PlayRequest(track))) {
-            return;
-        }
+        ClientPlayer.get().play(track);
         addRecent(track);
+        state = ClientPlayer.get().snapshot();
     }
 
     public void togglePlayPause() {
-        if (!state.hasTrack()) {
-            // nothing playing - start the queue, or the favourites as a fallback
-            if (!queue.isEmpty()) {
-                playTrack(queue.get(Math.max(0, Math.min(queueIndex, queue.size() - 1))));
-            } else if (!favorites.isEmpty()) {
-                playQueue(new ArrayList<>(favorites), 0);
-            }
+        ClientPlayer player = ClientPlayer.get();
+        if (player.hasTrack() && player.error().isEmpty()) {
+            player.toggle();
+            state = player.snapshot();
             return;
         }
-        send(state.playing() ? Payloads.ControlRequest.of("pause") : Payloads.ControlRequest.of("resume"));
+        // nothing playing - start the queue, or the favourites as a fallback
+        if (!queue.isEmpty()) {
+            playTrack(queue.get(Math.max(0, Math.min(queueIndex, queue.size() - 1))));
+        } else if (!favorites.isEmpty()) {
+            playQueue(new ArrayList<>(favorites), 0);
+        }
     }
 
     public void next() {
@@ -157,11 +146,11 @@ public final class ClientMusic {
             return;
         }
         if (shuffle && queue.size() > 1) {
-            int next = queueIndex;
-            while (next == queueIndex) {
-                next = (int) (Math.random() * queue.size());
+            int nextIndex = queueIndex;
+            while (nextIndex == queueIndex) {
+                nextIndex = (int) (Math.random() * queue.size());
             }
-            queueIndex = next;
+            queueIndex = nextIndex;
         } else {
             queueIndex++;
             if (queueIndex >= queue.size()) {
@@ -169,6 +158,8 @@ public final class ClientMusic {
                     queueIndex = 0;
                 } else {
                     queueIndex = queue.size() - 1;
+                    ClientPlayer.get().pause();
+                    state = ClientPlayer.get().snapshot();
                     return;
                 }
             }
@@ -188,42 +179,28 @@ public final class ClientMusic {
     }
 
     public void seek(int seconds) {
-        if (state.hasTrack()) {
-            send(new Payloads.ControlRequest("seek", Math.max(0, seconds)));
+        ClientPlayer player = ClientPlayer.get();
+        if (player.hasTrack()) {
+            player.seek(Math.max(0, seconds));
+            state = player.snapshot();
         }
     }
 
     public void stop() {
-        stoppedByUser = true;
-        send(Payloads.ControlRequest.of("stop"));
+        ClientPlayer.get().stop();
+        state = NowPlaying.IDLE;
     }
 
-    /** 0..1 - forwarded to the server, which applies it to the outgoing stream. */
+    /** 0..1 - applied before the audio is mixed into the voice chat stream. */
     public void setVolume(float volume) {
         float clamped = Math.max(0f, Math.min(1f, volume));
-        de.chaostobimc.mcmusic.config.MusicConfig.get().volume = clamped;
-        send(new Payloads.ControlRequest("volume", (int) Math.round(clamped * 100)));
+        MusicConfig.get().volume = clamped;
+        ClientPlayer.get().setVolume(clamped);
     }
 
-    public void requestState() {
-        net.minecraft.client.Minecraft minecraft = net.minecraft.client.Minecraft.getInstance();
-        if (minecraft.getConnection() == null || !ClientPlayNetworking.canSend(Payloads.Hello.TYPE)) {
-            return;
-        }
-        ClientPlayNetworking.send(Payloads.Hello.INSTANCE);
-    }
-
-    private boolean send(net.minecraft.network.protocol.common.custom.CustomPacketPayload payload) {
-        if (net.minecraft.client.Minecraft.getInstance().getConnection() == null) {
-            notify("Not connected to a world.");
-            return false;
-        }
-        if (!ClientPlayNetworking.canSend(payload.type())) {
-            notify("This server does not run MC Music - playback needs the mod on the server.");
-            return false;
-        }
-        ClientPlayNetworking.send(payload);
-        return true;
+    /** Applies the volume from the config file (called once on client start). */
+    public void syncVolume() {
+        ClientPlayer.get().setVolume((float) MusicConfig.get().volume);
     }
 
     // ------------------------------------------------------------------

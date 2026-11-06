@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * Plays a file from the server's local music library.
+ * Plays a file from the local music library folder.
  */
 public final class FileAudioSource implements AudioSource {
 

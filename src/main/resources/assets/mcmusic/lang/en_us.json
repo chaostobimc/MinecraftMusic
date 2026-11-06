@@ -3,10 +3,8 @@
   "mcmusic.key.open": "Open MC Music",
   "mcmusic.key.category": "MC Music",
   "mcmusic.command.opened": "Opening MC Music",
-  "mcmusic.voicechat.missing": "Simple Voice Chat is not installed - audio streaming is unavailable.",
-  "mcmusic.voicechat.category": "Music player",
-  "mcmusic.voicechat.category.desc": "Volume of music played through MC Music",
-  "mcmusic.error.no_server": "This server does not run MC Music - playback is not possible.",
+  "mcmusic.voicechat.missing": "Simple Voice Chat is not installed - the music stays on this PC.",
+  "mcmusic.voicechat.active": "Music is mixed into your Simple Voice Chat microphone stream.",
   "mcmusic.error.no_provider": "No music provider configured. Add a Piped or Invidious instance in the settings.",
   "mcmusic.now_playing": "Now playing: %s - %s"
 }

@@ -58,7 +58,7 @@ public final class AudioResolver {
     }
 
     private static String streamUrl(Track track, MusicConfig config) throws IOException {
-        // The server resolves stream urls itself, the client only sends the video id.
+        // Ask the provider for a direct audio url (mp3/wav) for this video id.
         try {
             var provider = config.isInvidious()
                     ? new de.chaostobimc.mcmusic.provider.InvidiousProvider(config.invidiousUrl)

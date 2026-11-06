@@ -1,12 +1,7 @@
 package de.chaostobimc.mcmusic.api;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-
 /**
- * A song. Everything the UI needs travels with the payload, so clients do not have to
- * ask the server again for metadata.
+ * A song with everything the UI needs to render it.
  *
  * @param id              the YouTube video id (11 characters)
  * @param title           song title
@@ -15,15 +10,6 @@ import net.minecraft.network.codec.StreamCodec;
  * @param thumbnailUrl    url of the cover art, may be empty
  */
 public record Track(String id, String title, String artist, int durationSeconds, String thumbnailUrl) {
-
-    public static final StreamCodec<RegistryFriendlyByteBuf, Track> CODEC = StreamCodec.composite(
-            ByteBufCodecs.STRING_UTF8, Track::id,
-            ByteBufCodecs.STRING_UTF8, Track::title,
-            ByteBufCodecs.STRING_UTF8, Track::artist,
-            ByteBufCodecs.VAR_INT, Track::durationSeconds,
-            ByteBufCodecs.STRING_UTF8, Track::thumbnailUrl,
-            Track::new
-    );
 
     public Track {
         if (id == null) {
