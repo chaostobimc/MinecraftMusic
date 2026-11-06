@@ -37,9 +37,11 @@ Jar enthalten – es muss nichts zusätzlich installiert werden.
 
 - **`M`** (frei belegbar) oder **`/mcmusic`** öffnet das Fenster.
 - **`Leertaste`** pausiert / setzt fort (solange die Suche nicht fokussiert ist).
-- **`Esc`** schließt und speichert.
+- **`Esc`** löst zuerst den Fokus der Suche und schließt erst danach das Fenster.
+- Beim Tippen im Suchfeld gehen Tasten an das Feld; `Enter` sucht und gibt den
+  Fokus wieder frei, damit `Leertaste` erneut pausiert.
 - `/mcmusic stop` beendet die Wiedergabe, `/mcmusic broadcast` schaltet den
-  Voice-Chat-Broadcast um.
+  Voice-Chat-Broadcast um (wirkt sofort, auch für einen laufenden Titel).
 
 Unten in der Player-Leiste: Cover, Titel, Shuffle · Zurück · Play/Pause · Weiter ·
 Repeat, Fortschrittsbalken (Klick = Springen), Lautstärke, Broadcast-Schalter und
