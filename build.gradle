@@ -21,8 +21,9 @@ repositories {
 
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
-    // MC 26.x ships with official (Mojang) names - Yarn has no 26.x mappings.
-    mappings loom.officialMojangMappings()
+    // No mappings entry on purpose: Minecraft 26.x ships non-obfuscated (official names),
+    // and Loom refuses Mojang mappings in a non-obfuscated environment. Yarn has no 26.x
+    // mappings either - the sources simply use the official names.
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
