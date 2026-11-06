@@ -130,6 +130,10 @@ public final class ClientMusic {
             return;
         }
         // nothing playing - start the queue, or the favourites as a fallback
+        if (queue.isEmpty() && favorites.isEmpty()) {
+            notify("Nothing to play yet - use the search field to find a song.");
+            return;
+        }
         if (!queue.isEmpty()) {
             playTrack(queue.get(Math.max(0, Math.min(queueIndex, queue.size() - 1))));
         } else if (!favorites.isEmpty()) {

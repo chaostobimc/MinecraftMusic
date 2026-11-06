@@ -27,12 +27,13 @@ import java.util.Set;
  * Downloads and uploads cover art.
  *
  * <p>Pictures are decoded and downscaled off-thread with ImageIO, then handed to the
- * render thread as a 96x96 texture - so scrolling never stutters and the GPU only ever
+ * render thread as a 192x192 texture - so scrolling never stutters and the GPU only ever
  * sees a small texture.</p>
  */
 public final class CoverCache {
 
-    private static final int SIZE = 96;
+    /** High enough for the big cards on a 4K screen, small enough to stay cheap. */
+    private static final int SIZE = 192;
     private static final HttpClient CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(6))
             .followRedirects(HttpClient.Redirect.NORMAL)

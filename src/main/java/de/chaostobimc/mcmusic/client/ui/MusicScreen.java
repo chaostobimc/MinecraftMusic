@@ -49,6 +49,15 @@ public final class MusicScreen extends Screen {
     private int playerH;
     private boolean compact;
 
+    /**
+     * Native pixel size of one UI unit. The whole interface is laid out in a fixed
+     * 1280x720 "virtual pixel" space and then scaled to the window, so it keeps its
+     * desktop-app proportions no matter what the vanilla GUI scale is set to.
+     */
+    private float uiScale = 1f;
+    private int vw = 1280;
+    private int vh = 720;
+
     // state
     private View view = View.HOME;
     private float scroll;
@@ -95,12 +104,22 @@ public final class MusicScreen extends Screen {
         layout();
     }
 
+    /** Converts a virtual UI coordinate to the scaled screen space used by scissors. */
+    private int scale(int value) {
+        return Math.round(value * uiScale);
+    }
+
     private void layout() {
-        int margin = Math.max(6, Math.min(14, width / 90));
+        float fit = Math.min(width / 1280f, height / 720f);
+        uiScale = Math.max(0.2f, Math.min(4f, fit));
+        vw = Math.max(360, Math.round(width / uiScale));
+        vh = Math.max(240, Math.round(height / uiScale));
+
+        int margin = Math.max(6, Math.min(14, vw / 90));
         winX = margin;
         winY = margin;
-        winW = width - margin * 2;
-        winH = height - margin * 2;
+        winW = vw - margin * 2;
+        winH = vh - margin * 2;
 
         compact = winW < 560;
         sideW = compact ? 54 : Math.max(150, Math.min(190, winW / 6));
@@ -137,6 +156,9 @@ public final class MusicScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
+        mouseX = Math.round(mouseX / uiScale);
+        mouseY = Math.round(mouseY / uiScale);
+
         if (frameCount == 0) {
             de.chaostobimc.mcmusic.MCMusic.LOGGER.info("MC Music: first frame {}x{}, gui {}x{}", width, height,
                     graphics.guiWidth(), graphics.guiHeight());
@@ -149,26 +171,40 @@ public final class MusicScreen extends Screen {
         hits.clear();
         Theme theme = Theme.get();
 
-        // window
-        Ui.shadow(graphics, winX, winY, winW, winH, 18, theme.shadow);
-        Ui.rect(graphics, winX, winY, winW, winH, 16, theme.window);
-        Ui.outline(graphics, winX, winY, winW, winH, 16, theme.divider);
+        var pose = graphics.pose();
+        pose.pushMatrix();
+        pose.scale(uiScale, uiScale);
+        try {
+            // window
+            Ui.shadow(graphics, winX, winY, winW, winH, 18, theme.shadow);
+            Ui.rect(graphics, winX, winY, winW, winH, 16, theme.window);
+            Ui.outline(graphics, winX, winY, winW, winH, 16, theme.divider);
 
-        drawSidebar(graphics, theme, mouseX, mouseY);
-        drawTopBar(graphics, theme, mouseX, mouseY);
-        drawContent(graphics, theme, mouseX, mouseY, delta);
-        drawPlayerBar(graphics, theme, mouseX, mouseY);
+            drawSidebar(graphics, theme, mouseX, mouseY);
+            drawTopBar(graphics, theme, mouseX, mouseY);
+            drawContent(graphics, theme, mouseX, mouseY, delta);
+            drawPlayerBar(graphics, theme, mouseX, mouseY);
 
-        if (settingsOpen) {
-            drawSettings(graphics, theme, mouseX, mouseY);
+            if (settingsOpen) {
+                drawSettings(graphics, theme, mouseX, mouseY);
+            }
+            if (creatingPlaylist) {
+                drawCreatePlaylist(graphics, theme, mouseX, mouseY);
+            }
+
+            String notice = music.notice();
+            if (!notice.isEmpty()) {
+                drawNotice(graphics, theme, notice);
+            }
+        } catch (Throwable throwable) {
+            de.chaostobimc.mcmusic.MCMusic.LOGGER.error("MC Music: rendering the music screen failed", throwable);
+        } finally {
+            pose.popMatrix();
         }
-        if (creatingPlaylist) {
-            drawCreatePlaylist(graphics, theme, mouseX, mouseY);
-        }
 
-        String notice = music.notice();
-        if (!notice.isEmpty()) {
-            drawNotice(graphics, theme, notice);
+        if (frameCount == 1) {
+            de.chaostobimc.mcmusic.MCMusic.LOGGER.info("MC Music: first frame done - uiScale {}, canvas {}x{}, {} hit regions",
+                    uiScale, vw, vh, hits.size());
         }
     }
 
@@ -325,7 +361,7 @@ public final class MusicScreen extends Screen {
             scroll = scrollTarget;
         }
 
-        graphics.enableScissor(contentX, contentY, contentX + contentW, contentY + contentH);
+        graphics.enableScissor(scale(contentX), scale(contentY), scale(contentX + contentW), scale(contentY + contentH));
         int cursorX = contentX;
         int cursorY = contentY - (int) scroll;
 
@@ -888,8 +924,8 @@ public final class MusicScreen extends Screen {
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        double mouseX = event.x();
-        double mouseY = event.y();
+        double mouseX = event.x() / uiScale;
+        double mouseY = event.y() / uiScale;
         int button = event.button();
 
         for (int i = hits.size() - 1; i >= 0; i--) {
@@ -904,6 +940,9 @@ public final class MusicScreen extends Screen {
 
         if (settingsOpen || creatingPlaylist) {
             return true;
+        }
+        if (hits.isEmpty()) {
+            de.chaostobimc.mcmusic.MCMusic.LOGGER.info("MC Music: click at {},{} ignored - the UI has not registered any hit regions yet", mouseX, mouseY);
         }
         if (!Ui.inside(mouseX, mouseY, contentX, contentY, contentW, contentH)) {
             searchFocused = false;
@@ -1062,11 +1101,11 @@ public final class MusicScreen extends Screen {
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
         if (draggingProgress) {
-            updateSeek(event.x());
+            updateSeek(event.x() / uiScale);
             return true;
         }
         if (draggingVolume) {
-            updateVolume(event.x());
+            updateVolume(event.x() / uiScale);
             return true;
         }
         return super.mouseDragged(event, dragX, dragY);
@@ -1074,6 +1113,8 @@ public final class MusicScreen extends Screen {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        mouseX /= uiScale;
+        mouseY /= uiScale;
         if (Ui.inside(mouseX, mouseY, contentX, contentY, contentW, contentH)) {
             scrollTarget -= (float) scrollY * 32f;
             if (scrollTarget < 0) {

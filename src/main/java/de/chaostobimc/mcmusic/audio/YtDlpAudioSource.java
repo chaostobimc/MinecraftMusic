@@ -74,8 +74,19 @@ public final class YtDlpAudioSource implements AudioSource, AutoCloseable {
         return "yt-dlp";
     }
 
+    private static volatile long toolsCheckedAt;
+    private static volatile boolean toolsFound;
+
+    /** Cached for 30 seconds - spawning two processes on every song start is noticeable. */
     public static boolean toolsAvailable(MusicConfig config) {
-        return isExecutable(config.ytDlpPath, "--version") && isExecutable(config.ffmpegPath, "-version");
+        long now = System.currentTimeMillis();
+        if (now - toolsCheckedAt < 30_000L) {
+            return toolsFound;
+        }
+        boolean found = isExecutable(config.ytDlpPath, "--version") && isExecutable(config.ffmpegPath, "-version");
+        toolsFound = found;
+        toolsCheckedAt = now;
+        return found;
     }
 
     private static boolean isExecutable(String command, String versionFlag) {
