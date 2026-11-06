@@ -88,9 +88,24 @@ Mod-Load auf Java-21-Runtimes.
 
 > **Hinweis:** Der Code in diesem Repository wurde vollständig gegen echte
 > Minecraft-Klassen, die Fabric API 0.153, LavaPlayer 2.2.7, youtube-source v2,
-> die Simple-Voice-Chat-API 2.7.0 und Concentus 1.0.1 typgeprüft und kompiliert.
+> die Simple-Voice-Chat-API 2.7.0 und Concentus 1.0.1 typgeprüft und kompiliert
+> (17 Server-/Common- und 24 Client-Klassen, ohne Fehler und Warnungen).
 > Ein vollständiger `gradlew build` (mit Remapping) muss auf einem Rechner mit
 > Netzwerkzugang erfolgen.
+
+Zusätzlich ausgeführt:
+
+- **Opus-Kodierung** (Concentus): 50 Frames à 20 ms ergeben 960 Samples pro Frame,
+  im Mittel 241 Byte und maximal 356 Byte – deutlich unter dem SVC-Limit von
+  1275 Byte, rund 96 kbit/s.
+- **Audio-Konvertierung**: Little-Endian-Dekodierung, Stereo-zu-Mono-Mischung,
+  Auffüllen kurzer Frames und Lautstärke-Clipping bei ±32767.
+- **Textkürzung**: Titel über 128 Zeichen werden auf 128 Zeichen mit „…" gekürzt,
+  Statusmeldungen auf 200 – nötig, weil `writeUtf` sonst eine `EncoderException`
+  wirft. Umlaute und Sonderzeichen bleiben dabei als UTF-8 intakt.
+- **Suchtreffer-Laden**: Video-IDs und Watch-URLs (`watch?v=`, `youtu.be/`,
+  auch mit Zusatzparametern) werden auf dieselbe ID reduziert, damit Favoriten
+  unabhängig von ihrer Herkunft wieder ladbar sind.
 
 ## Projektstruktur
 
