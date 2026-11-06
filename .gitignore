@@ -1,0 +1,32 @@
+# build output
+build/
+out/
+run/
+.archives/
+.gradle/
+.loom-cache/
+
+# ide
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+eclipse/
+bin/
+.classpath
+.project
+.settings/
+
+# java
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# os
+.DS_Store
+Thumbs.db
+
+# mod data
+mcmusic-library/
+config/mcmusic.json

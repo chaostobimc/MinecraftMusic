@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "mcmusic",
+  "version": "${version}",
+  "name": "MC Music",
+  "description": "YouTube Music in Minecraft: a modern, high resolution music client with search, playlists and favourites, streaming through Simple Voice Chat so everyone on the server can hear it.",
+  "authors": [
+    "chaostobimc"
+  ],
+  "contact": {
+    "homepage": "https://github.com/chaostobimc/MinecraftMusic",
+    "sources": "https://github.com/chaostobimc/MinecraftMusic",
+    "issues": "https://github.com/chaostobimc/MinecraftMusic/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/mcmusic/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "de.chaostobimc.mcmusic.MCMusic"
+    ],
+    "client": [
+      "de.chaostobimc.mcmusic.client.MCMusicClient"
+    ],
+    "voicechat": [
+      "de.chaostobimc.mcmusic.voicechat.MCMusicVoicechatPlugin"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "${minecraft_dependency}",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "voicechat": ">=2.6.0",
+    "voicechat_api": ">=${voicechat_api_version}"
+  }
+}

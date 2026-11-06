@@ -1,0 +1,67 @@
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+    id 'java'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+    mavenCentral()
+    // Simple Voice Chat API
+    maven {
+        name = 'Henkelmax'
+        url = 'https://maven.maxhenkel.de/repository/public'
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+
+    // Simple Voice Chat API - compile only, shipped by the Simple Voice Chat mod itself.
+    compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+
+    // Streaming MP3 decoding through javax.sound (bundled into the mod jar).
+    implementation "com.googlecode.soundlibs:mp3spi:${project.mp3spi_version}"
+    include "com.googlecode.soundlibs:mp3spi:${project.mp3spi_version}"
+    include "com.googlecode.soundlibs:tritonus-share:${project.tritonus_version}"
+    include "com.googlecode.soundlibs:jlayer:${project.jlayer_version}"
+}
+
+processResources {
+    inputs.property 'version', project.version
+    inputs.property 'minecraft_dependency', project.minecraft_dependency
+    inputs.property 'loader_version', project.loader_version
+    inputs.property 'voicechat_api_version', project.voicechat_api_version
+
+    filesMatching('fabric.mod.json') {
+        expand 'version': project.version,
+                'minecraft_dependency': project.minecraft_dependency,
+                'loader_version': project.loader_version,
+                'voicechat_api_version': project.voicechat_api_version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = 'UTF-8'
+    it.options.release.set(25)
+}
+
+java {
+    withSourcesJar()
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+jar {
+    from('LICENSE') {
+        rename { "${it}_${project.base.archivesName.get()}" }
+    }
+}
